@@ -115,6 +115,7 @@ Delete the link and create a new one; for example,
 ### 2.2 Using Spark shell and writing your first Spark program
 
 #### 2.2.1 Starting the Spark shell
+Start the **spark shell** with the (obvious) command:
 
     spark@spark-in-action:~$ spark-shell
     Setting default log level to "WARN".
@@ -155,6 +156,9 @@ can ingest that file and count the lines using the Spark API:
     scala> licLines.filter(_.contains("BSD")).count // res0: Long = 33
     scala> licLines.filter(_.contains("BSD")).foreach(println)
 
+In Scala, you don't always need the dots.  The following also works:
+
+    scala> licLines filter(_.contains("BSD")) foreach(println)
 
 #### 2.2.3 The notion of a resilient distributed dataset (RDD)
 
@@ -208,9 +212,9 @@ This can be seen by applying the `collect` action to the RDD as follows:
     scala> idsStr.collect
     res5: Array[Array[String]] = Array(Array(15, 16, 20, 20), Array(77, 80, 94), Array(94, 98, 16, 31), Array(31, 15, 20))
 
-Note that the `split` function takes each input string to an array, so
-applying `map split` to an `RDD[Array[String]]` results in an array
-of arrays, i.e., `Array[Array[String]]` in the present case.
+Note that the `split` function takes each input string to an array,
+so applying `map split` to an `RDD[Array[String]]` results in an
+array of arrays, i.e., `Array[Array[String]]` in the present case.
 What if we want to concatenate all of the results into a single array.
 Then we use `flatMap` instead of `map`.
 
@@ -218,6 +222,21 @@ Then we use `flatMap` instead of `map`.
     scala> val idsStr = lines.flatMap(_.split(","))
     scala> idsStr.collect
     res0: Array[String] = Array(15, 16, 20, 20, 77, 80, 94, 94, 98, 16, 31, 31, 15, 20)
+
+
+Our task was to find the number of unique clients who bought
+anything, so we need the method `distinct` which returns a new
+RDD with duplicates removed: `def distinct(): RDD[T]`
+
+When called on an RDD, it creates a new RDD with unique elements (of the
+same type, of course).
+
+    scala> val uniqueIds = intIds.distinct
+    uniqueIds: org.apache.spark.rdd.RDD[Int] = MapPartitionsRDD[12] at distinct at <console>:27
+    scala> uniqueIds.collect
+    res15: Array[Int] = Array(16, 80, 98, 20, 94, 15, 77, 31)
+    scala> val finalCount = uniqueIds.count
+    finalCount: Long = 8
 
 #### 2.3.3 Obtaining RDD's elements with the sample, take, and takeSample operations
 
