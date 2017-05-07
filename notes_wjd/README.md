@@ -239,6 +239,60 @@ same type, of course).
     finalCount: Long = 8
 
 #### 2.3.3 Obtaining RDD's elements with the sample, take, and takeSample operations
+Suppose you need to prepare a sample set that contains 30% of
+client IDs randomly picked from the same log. The authors of
+the RDD API anticipated this exact situation and implemented a
+sample method in the RDD class. It's a transformation that creates
+a new RDD with (a random number) of random elements from the calling `RDD` (`this`).
+
+    def sample(withReplacement: Boolean, fraction: Double, seed: Long = Utils.random.nextLong): RDD[T]
+
++ `withReplacement` determines whether the same element may be
+  sampled multiple times.
+
++ `fraction` determines the expected number of times each
+  element is going to be sampled (as a number greater than zero),
+  when replacement is used. When used without replacement, it
+  determines the expected probability that each element is going to
+  be sampled, expressed as a floating-point number between 0 and 1.
+
+You needed to prepare a set of 30% (0.3) of all client IDs. You'll
+
+**Sampling without replacement.**
+
+    scala> val s = uniqueIds.sample(false, 0.3)
+    s: org.apache.spark.rdd.RDD[String] = PartitionwiseSampledRDD[19] at sample at <console>:27
+    scala> s.count
+    res19: Long = 2
+    scala> s.collect
+    res20: Array[String] = Array(94, 21)
+
+**Sampling with replacement.**
+A 50% with replacement will make results more apparent:
+
+    scala> val swr = uniqueIds.sample(true, 0.5)
+    swr: org.apache.spark.rdd.RDD[String] = PartitionwiseSampledRDD[20] at sample at <console>:27
+    scala> swr.count
+    res21: Long = 5
+    scala> swr.collect
+    res22: Array[String] = Array(16, 80, 80, 20, 94)
+
+**Deterministic sample size.**
+If you want to sample an exact number of elements from an RDD, you
+can use the `takeSample` *action*.
+
+    def takeSample(withReplacement: Boolean, num: Int, seed: Long = Utils.random.nextLong): Array[T]
+
+There are two differences between `sample` and `takeSample`.
+
+1. `takeSample` takes an `Int` as its second parameter, which
+   determines the number of sampled elements it returns. It always
+   returns exactly `num` number of elements).
+2. Whhereas `sample` is a transformation, takeSample is an action,
+   which returns an array (like `collect`).
+
+        scala> val taken = uniqueIds.takeSample(false, 5)
+        taken: Array[String] = Array(80, 98, 77, 31, 15)
 
 ### 2.4 Double RDD functions
 #### 2.4.1 Basic statistics with double RDD functions
