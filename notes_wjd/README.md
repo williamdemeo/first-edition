@@ -295,7 +295,76 @@ There are two differences between `sample` and `takeSample`.
         taken: Array[String] = Array(80, 98, 77, 31, 15)
 
 ### 2.4 Double RDD functions
+
+If you create an RDD containing only `Double` elements, several extra functions
+become available, through the concept known as *implicit conversion*.
+
+#### Scala's implicit conversion
+
+Implicit conversion is a useful concept, heavily used in Spark, but it can be a
+bit tricky to understand at first.
+
+Let's say we have a Scala class defined like this:
+
+    class ClassOne[T](val input: T) { }
+
+`ClassOne` is type parameterized, so the argument input can be of type
+`String`, `Int`, or any other type. Suppose we want objects of `ClassOne`
+to have a method `duplicatedString()`, but only if input is a string,
+and to have a method `duplicatedInt()` only if input is an integer.
+You can accomplish this by creating two classes,
+each containing one of these new methods. Additionally, you have to define two
+implicit methods that will be used for conversion of ClassOne to these new
+classes, like this:
+
+    class ClassOneStr(val one: ClassOne[String]) {
+    def duplicatedString() = one.input + one.input
+    }
+    class ClassOneInt(val one: ClassOne[Int]) {
+    def duplicatedInt() = one.input.toString + one.input.toString
+    }
+    implicit def toStrMethods(one: ClassOne[String]) = new ClassOneStr(one)
+    implicit def toIntMethods(one: ClassOne[Int]) = new ClassOneInt(one)
+
+The compiler can now perform automatic conversion from type `ClassOne[String]`
+to `ClassOneStr` and from `ClassOne[Int]` to `ClassOneInt`, and you can use
+their methods on `ClassOne` objects. You can now perform something like this:
+
+    scala> val oneStrTest = new ClassOne("test")
+    oneStrTest: ClassOne[String] = ClassOne@516a4aef
+    scala> val oneIntTest = new ClassOne(123)
+    oneIntTest: ClassOne[Int] = ClassOne@f8caa36
+    scala> oneStrTest.duplicatedString()
+    res0: String = testtest
+    scala> oneIntTest.duplicatedInt()
+    res1: 123123
+
+
 #### 2.4.1 Basic statistics with double RDD functions
+
+Let's use the `intIds` RDD you created previously to illustrate the concepts in
+this section. Although `intIds` contains  `Int` objects, they can be converted
+to `Doubles`, so double RDD functions can be implicitly applied.
+Using mean and sum is trivial:
+
+    scala> val intIds = idsStr.map(_.toInt)
+    scala> intIds.mean
+    res0: Double = 44.785714285714285
+    scala> intIds.sum
+    res1: Double = 627.0
+
+A bit more involved is the stats action. It calculates the count and sum of all
+elements; their mean, maximum, and minimum values; and their variance and
+standard deviation, all in one pass, and returns an `org.apache.spark.util.StatCounter`
+object that has methods for accessing all these metrics.
+`variance` and `stdev` actions are just shortcuts for calling
+`stats().variance` and `stats().stdev`:
+
+    scala> intIds.variance
+    res2: Double = 1114.8826530612246
+    scala> intIds.stdev
+    res3: Double = 33.38985853610681
+
 #### 2.4.2 Visualizing data distribution with histograms
 #### 2.4.3 Approximate sum and mean
 
